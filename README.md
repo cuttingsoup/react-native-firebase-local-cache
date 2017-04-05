@@ -3,6 +3,30 @@ A simple wrapper to add local caching of data to Firebase `on(...)` listeners, u
 
 ## Sample Use Case
 
+In the simplest example, say displaying a users name and email. Previously you could do the following:
+
+```javascript
+this.userRef.on('value', function(snap) {
+  this.setState({
+    name: snap.val().name,
+    email: snap.val().email
+  });
+},this);
+```
+
+The equivalent using this module would be:
+
+```javascript
+cachedListener.on(this.userRef, 'value', function(snap) {
+  return {
+    name: snap.val().name,
+    email: snap.val().email
+  });
+}, this.setState, this);
+```
+
+There is a little bit of trickiness going on here, but essentially the return value of the first callback is cached, then passed as an argument to the second callback. The next time a listener is set up, `setState` will be called with the cached data immediately, then when a snapshot arrived from the server it will be processed normally.
+
 If you have a list of chat rooms a user is subscribed to, you might use the following code:
 
 ```javascript
@@ -26,18 +50,17 @@ Until any data has been loaded, the list will remain empty. This package provide
 
 ```javascript
 cachedListener.on(this.userRoomsRef, 'value', function(snap) {
-  var teams = [];
+  var rooms = [];
 
   snap.forEach((child) => {
-    teams.push({
-      type: "team",
-      teamName: child.val().name,
+    rooms.push({
+      roomName: child.val().name,
       _key: child.key
     });
   });
 
-  return teams;
-}, function(teams) {
+  return rooms;
+}, function(rooms) {
   this.setState({
     dataSource: this.state.dataSource.cloneWithRows(rooms))
   });
@@ -54,6 +77,7 @@ A cancelCallback and/or context can optionally be passed as well.
 
 There are some subtle differences between this implementation and the Firebase one that should be noted:
 
+* Data is cached based on the `database.Reference`, as a result if there are two listeners for the same reference, they will overwrite each other's cache - it is recommended that a general processing callback be used, then the required data be extracted on the processedCallback.
 * The only valid `eventType` value is `'value'`. Note that the module should pass everything through to the native method, but no data will be cached.
 * The Firebase `database.Reference.on(...)` method returns the provided callback function unmodified. In this module a Promise is returned that is resolved after cached data has been loaded, the callback has been called, and the native listener has been started.
 * If passing a context, either do so as the 5th parameter (if no cancelCallback is defined), or as the 6th parameter (if a cancelCallback is defined). I.e. don't pass a null or undefined cancelCallback, either omit it completely or put in something valid.
