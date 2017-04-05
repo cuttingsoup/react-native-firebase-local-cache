@@ -73,11 +73,74 @@ The second callback is passed either the freshly processed new data, or when fir
 
 A cancelCallback and/or context can optionally be passed as well.
 
+## Multiple Listeners
+
+If you have multiple listeners attached to the same location, it is possible that they will overwrite each other, here is a very contrived example:
+
+On one screen:
+
+```javascript
+this.userRef = firebase.database().ref(`users/${this.userId}`);
+
+cachedListener.on(this.userRef, 'value', function(snap) {
+  return {
+    name: snap.val().name,
+    email: snap.val().email
+  });
+}, this.setState, this);
+```
+
+And on another:
+
+```javascript
+this.userRef = firebase.database().ref(`users/${this.userId}`);
+
+cachedListener.on(this.userRef, 'value', function(snap) {
+  return {
+    name: snap.val().name,
+    email: snap.val().email,
+    age: snap.val().age
+  });
+}, function(user) {
+  this.setState(user);
+  this._doSomethingWithEmail(user.email);
+}, this);
+```
+
+When the first case runs, it will remove the `age` from the cache as it is not present in the returned data. 
+
+One solution is to use a helper method that saves everything:
+
+```javascript
+const usersRef = firebase.database().ref('users');
+
+...
+
+export function createCachedUserListener(userId, callback, errorCallback, context) {
+  cachedListener.on(this.teamsRef.child(teamId), 'value', function(snapshot) {
+    //Process the snapshot to get any data that might be required.
+    return {
+      name: snap.val().name,
+      email: snap.val().email,
+      age: snap.val().age
+    };
+  }, callback, errorCallback, context);
+}
+```
+
+On your original files, just use the data that is required:
+
+```javascript
+Helper.createCachedUserListener(this.userId, 'value', function(user) {
+  this.setState(user);
+  this._do_somethingWithEmail(user.email);
+}, this);
+```
+
 ## Differences and Limitations
 
 There are some subtle differences between this implementation and the Firebase one that should be noted:
 
-* Data is cached based on the `database.Reference`, as a result if there are two listeners for the same reference, they will overwrite each other's cache - it is recommended that a general processing callback be used, then the required data be extracted on the processedCallback.
 * The only valid `eventType` value is `'value'`. Note that the module should pass everything through to the native method, but no data will be cached.
 * The Firebase `database.Reference.on(...)` method returns the provided callback function unmodified. In this module a Promise is returned that is resolved after cached data has been loaded, the callback has been called, and the native listener has been started.
 * If passing a context, either do so as the 5th parameter (if no cancelCallback is defined), or as the 6th parameter (if a cancelCallback is defined). I.e. don't pass a null or undefined cancelCallback, either omit it completely or put in something valid.
