@@ -29,7 +29,7 @@ cachedListener.on(this.userRef, 'value', function(snap) {
 
 There is a little bit of trickiness going on here, but essentially the return value of the first callback is cached, then passed as an argument to the second callback. The next time a listener is set up, `setState` will be called with the cached data immediately, then when a snapshot arrived from the server it will be processed normally.
 
-If you have a list of chat rooms a user is subscribed to, you might use the following code:
+Another slightly more complex example, say you have a list showing chat rooms a user is subscribed to, you might use the following code:
 
 ```javascript
 this.userRoomsRef.on('value', function(snap) {
@@ -48,7 +48,7 @@ this.userRoomsRef.on('value', function(snap) {
 },this);
 ```
 
-Until any data has been loaded, the list will remain empty. This package provides an alternative where the list is cached locally so the next time the screen is opened, the list is populated with cached data, and updated when fresh data arrives. The equivalent code would be:
+Again, until any data has been loaded, the list will remain empty. The equivalent code to cache this list for subsequent loads would be:
 
 ```javascript
 cachedListener.on(this.userRoomsRef, 'value', function(snap) {
@@ -69,7 +69,7 @@ cachedListener.on(this.userRoomsRef, 'value', function(snap) {
 },this);
 ```
 
-The first callback does any processing of new data required and returns a JSON.stringify-able object that can be cached. (_Note: objects are only commited to the cache when the corresponding `cachedListener.off(...)` method is called._)
+The first callback does any processing of new data required and returns a __`JSON.stringify-able`__ object that can be cached. (_Note: objects are only commited to the cache when the corresponding `cachedListener.off(...)` method is called._)
 
 The second callback is passed either the freshly processed new data, or when first started, the cached data.
 
@@ -119,7 +119,7 @@ const usersRef = firebase.database().ref('users');
 ...
 
 export function createCachedUserListener(userId, callback, errorCallback, context) {
-  cachedListener.on(this.teamsRef.child(teamId), 'value', function(snapshot) {
+  cachedListener.on(usersRef.child(userId), 'value', function(snapshot) {
     //Process the snapshot to get any data that might be required.
     return {
       name: snap.val().name,
@@ -133,7 +133,7 @@ export function createCachedUserListener(userId, callback, errorCallback, contex
 On your original files, just use the data that is required:
 
 ```javascript
-Helper.createCachedUserListener(this.userId, 'value', function(user) {
+Helper.createCachedUserListener(this.userId, function(user) {
   this.setState(user);
   this._do_somethingWithEmail(user.email);
 }, this);
