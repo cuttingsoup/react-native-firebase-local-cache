@@ -71,13 +71,10 @@ const cachedDb = {
 	 * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
 	 * @returns {Promise} Promis that will resolve after listener is switched off and cache has been written.
 	 */
-	off(dbRef) {
-		const location = dbRef.toString().substring(dbRef.root.toString().length);
+	offValue(dbRef) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'value');
 
-		// If a new acceptedOnVerb is added, do a foreach. Or do one when i am not feeling lazy.
-		var storageKey = `@FirebaseLocalCache:value:${location}`;
-
-		//And turn listener off.
+		//Turn listener off.
 		dbRef.off();
 
 		return new Promise((resolve, reject) => {

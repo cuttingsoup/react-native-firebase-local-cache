@@ -227,7 +227,7 @@ describe('on', () => {
 		const processedCallback = jest.fn();
 
 		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
-		.then(() => { return cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.offValue(mockDbRef) })
 		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallback); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -263,7 +263,7 @@ describe('on', () => {
 		}
 
 		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
-		.then(() => { return cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.offValue(mockDbRef) })
 		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallbackWrapper, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -298,7 +298,7 @@ describe('on', () => {
 		}
 
 		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
-		.then(() => { return cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.offValue(mockDbRef) })
 		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallbackWrapper, ()=>{}, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -329,7 +329,7 @@ describe('clearCacheForRef', () => {
 		const processedCallback = jest.fn();
 
 		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
-		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
+		.then(() => { return cachedDb.offValue(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
 
@@ -368,7 +368,7 @@ describe('clearCache', () => {
 		const processedCallback = jest.fn();
 
 		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
-		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
+		.then(() => { return cachedDb.offValue(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
 
