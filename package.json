@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dist": "babel src -d dist",
-    "gen-docs": "./node_modules/.bin/jsdox src/index.js --output docs",
+    "gen-docs": "./node_modules/.bin/jsdox dist/index.js --output docs",
     "preversion": "npm run dist -s ; npm run gen-docs -s",
     "test": "./node_modules/.bin/jest"
   },
