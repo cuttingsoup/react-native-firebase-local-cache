@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/cuttingsoup/react-native-firebase-local-cache.svg?branch=master)](https://travis-ci.org/cuttingsoup/react-native-firebase-local-cache) [![Coverage Status](https://coveralls.io/repos/github/cuttingsoup/react-native-firebase-local-cache/badge.svg?branch=master)](https://coveralls.io/github/cuttingsoup/react-native-firebase-local-cache?branch=master) 
+
 # react-native-firebase-local-cache
 A simple wrapper to add local caching of data to Firebase `on(...)` listeners, useful for improving the apparent load time of screens/pages in your app. 
 
