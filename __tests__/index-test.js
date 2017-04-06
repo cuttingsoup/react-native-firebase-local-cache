@@ -99,59 +99,8 @@ describe('on', () => {
 
 		const processedCallback = jest.fn();
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback).then(() => {
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback).then(() => {
 			expect(snapCallback).toBeCalledWith("fake-data");
-			expect(processedCallback).toBeCalledWith("processed");
-		});
-	});
-
-	it('should call snapCallback followed by processedCallback as normal if unsupported eventType used', () => {
-		const { AsyncStorage } = require('react-native');
-		const cachedDb = require(INDEX_PATH);
-
-		var mockDbRef = makeMockDbRef();
-
-		const snapCallback = jest.fn();
-		snapCallback.mockReturnValueOnce("processed");
-
-		const processedCallback = jest.fn();
-
-		return cachedDb.on(mockDbRef, 'child_added', snapCallback, processedCallback).then(() => {
-			expect(snapCallback.mock.calls.length).toBe(1);
-			expect(snapCallback).toBeCalledWith("fake-data");
-			expect(processedCallback.mock.calls.length).toBe(1);
-			expect(processedCallback).toBeCalledWith("processed");
-		});
-	});
-
-	it('should call snapCallback followed by processedCallback as normal if unsupported eventType used, with correct context', () => {
-		const { AsyncStorage } = require('react-native');
-		const cachedDb = require(INDEX_PATH);
-
-		const context = {str: 'test'};
-
-		var mockDbRef = makeMockDbRef();
-
-		const snapCallback = jest.fn();
-		snapCallback.mockReturnValueOnce('processed');
-
-		const snapCallbackWrapper = function(snap) {
-			expect(this).toBeDefined();
-			expect(this.str).toBe('test');
-			return snapCallback(snap);
-		}
-
-		const processedCallback = jest.fn();
-		const processedCallbackWrapper = function(data) {
-			expect(this).toBeDefined();
-			expect(this.str).toBe('test');
-			processedCallback(data);
-		}
-
-		return cachedDb.on(mockDbRef, 'child_changed', snapCallbackWrapper, processedCallbackWrapper, context).then(() => {
-			expect(snapCallback.mock.calls.length).toBe(1);
-			expect(snapCallback).toBeCalledWith("fake-data");
-			expect(processedCallback.mock.calls.length).toBe(1);
 			expect(processedCallback).toBeCalledWith("processed");
 		});
 	});
@@ -164,7 +113,7 @@ describe('on', () => {
 		const processedCallback = jest.fn();
 		const cancelledCallback = jest.fn();
 
-		return cachedDb.on(mockForbiddenDbRef, 'value', snapCallback, processedCallback, cancelledCallback).then(() => {
+		return cachedDb.onValue(mockForbiddenDbRef, snapCallback, processedCallback, cancelledCallback).then(() => {
 			expect(snapCallback.mock.calls.length).toBe(0);
 			expect(processedCallback.mock.calls.length).toBe(0);
 			expect(cancelledCallback.mock.calls.length).toBe(1);
@@ -196,7 +145,7 @@ describe('on', () => {
 			processedCallback(data);
 		}
 
-		return cachedDb.on(mockDbRef, 'value', snapCallbackWrapper, processedCallbackWrapper, context).then(() => {
+		return cachedDb.onValue(mockDbRef, snapCallbackWrapper, processedCallbackWrapper, context).then(() => {
 			expect(snapCallback.mock.calls.length).toBe(1);
 			expect(snapCallback).toBeCalledWith("fake-data");
 			expect(processedCallback.mock.calls.length).toBe(1);
@@ -231,7 +180,7 @@ describe('on', () => {
 
 		const cancelledCallback = jest.fn();
 
-		return cachedDb.on(mockDbRef, 'value', snapCallbackWrapper, processedCallbackWrapper, context).then(() => {
+		return cachedDb.onValue(mockDbRef, snapCallbackWrapper, processedCallbackWrapper, context).then(() => {
 			expect(snapCallback.mock.calls.length).toBe(1);
 			expect(snapCallback).toBeCalledWith("fake-data");
 			expect(processedCallback.mock.calls.length).toBe(1);
@@ -257,7 +206,7 @@ describe('on', () => {
 			return cancelledCallback(err);
 		}
 
-		return cachedDb.on(mockForbiddenDbRef, 'value', snapCallback, processedCallback, cancelledCallbackWrapper, context).then(() => {
+		return cachedDb.onValue(mockForbiddenDbRef, snapCallback, processedCallback, cancelledCallbackWrapper, context).then(() => {
 			expect(snapCallback.mock.calls.length).toBe(0);
 			expect(processedCallback.mock.calls.length).toBe(0);
 			expect(cancelledCallback.mock.calls.length).toBe(1);
@@ -277,9 +226,9 @@ describe('on', () => {
 
 		const processedCallback = jest.fn();
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
 		.then(() => { return cachedDb.off(mockDbRef) })
-		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback); })
+		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallback); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
 			expect(snapCallback).toBeCalledWith("fake-data");
@@ -313,9 +262,9 @@ describe('on', () => {
 			return processedCallback(param);
 		}
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
 		.then(() => { return cachedDb.off(mockDbRef) })
-		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallbackWrapper, context); })
+		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallbackWrapper, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
 			expect(snapCallback).toBeCalledWith("fake-data");
@@ -348,9 +297,9 @@ describe('on', () => {
 			return processedCallback(param);
 		}
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
 		.then(() => { return cachedDb.off(mockDbRef) })
-		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallbackWrapper, ()=>{}, context); })
+		.then(() => { return cachedDb.onValue(mockDbRef, snapCallback, processedCallbackWrapper, ()=>{}, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
 			expect(snapCallback).toBeCalledWith("fake-data");
@@ -379,7 +328,7 @@ describe('clearCacheForRef', () => {
 
 		const processedCallback = jest.fn();
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
 		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
@@ -418,7 +367,7 @@ describe('clearCache', () => {
 
 		const processedCallback = jest.fn();
 
-		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
+		return cachedDb.onValue(mockDbRef, snapCallback, processedCallback)
 		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
