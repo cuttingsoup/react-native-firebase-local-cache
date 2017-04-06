@@ -6,8 +6,6 @@
 
 var _reactNative = require('react-native');
 
-function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
-
 var snapPeak = {};
 
 var acceptedOnVerbs = ['value'];
@@ -69,153 +67,65 @@ var cachedDb = {
 	/**
   * Remove any listeners from the specified ref, and save any existing data to the cache.
   * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
+  * @returns {Promise} Promis that will resolve after listener is switched off and cache has been written.
   */
 	off: function off(dbRef) {
-		var _this = this;
+		var location = dbRef.toString().substring(dbRef.root.toString().length);
 
-		return _asyncToGenerator(regeneratorRuntime.mark(function _callee() {
-			var location, storageKey;
-			return regeneratorRuntime.wrap(function _callee$(_context) {
-				while (1) {
-					switch (_context.prev = _context.next) {
-						case 0:
-							location = dbRef.toString().substring(dbRef.root.toString().length);
+		// If a new acceptedOnVerb is added, do a foreach. Or do one when i am not feeling lazy.
+		var storageKey = '@FirebaseLocalCache:value:' + location;
 
-							// If a new acceptedOnVerb is added, do a foreach. Or do one when i am not feeling lazy.
+		//And turn listener off.
+		dbRef.off();
 
-							storageKey = '@FirebaseLocalCache:value:' + location;
-
-							//Save to the cache, if there is data for it. Don't return until saved.
-
-							if (!(storageKey in snapPeak)) {
-								_context.next = 6;
-								break;
-							}
-
-							_context.next = 5;
-							return _reactNative.AsyncStorage.setItem(storageKey, snapPeak[storageKey]);
-
-						case 5:
-							//Clear the locally cached version.
-							delete snapPeak[storageKey];
-
-						case 6:
-
-							//And turn listener off.
-							dbRef.off();
-
-						case 7:
-						case 'end':
-							return _context.stop();
-					}
-				}
-			}, _callee, _this);
-		}))();
+		return new Promise(function (resolve, reject) {
+			if (storageKey in snapPeak) {
+				var dataToCache = snapPeak[storageKey];
+				delete snapPeak[storageKey];
+				resolve(_reactNative.AsyncStorage.setItem(storageKey, dataToCache));
+			} else {
+				resolve(null);
+			}
+		});
 	},
 
 
 	/**
   * Remove the currently cached data for a particular database.Reference. If there are any listeners still active, they will re-write their data to the cache when the .off method is called.
   * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
+  * @returns {Promise} Promise that resolves once all cached data for this ref has been cleared.
   */
 	clearCacheForRef: function clearCacheForRef(dbRef) {
-		var _this2 = this;
+		var location = dbRef.toString().substring(dbRef.root.toString().length);
 
-		return _asyncToGenerator(regeneratorRuntime.mark(function _callee3() {
-			var location;
-			return regeneratorRuntime.wrap(function _callee3$(_context3) {
-				while (1) {
-					switch (_context3.prev = _context3.next) {
-						case 0:
-							location = dbRef.toString().substring(dbRef.root.toString().length);
+		var promises = [];
 
+		acceptedOnVerbs.forEach(function (eventType) {
+			var storageKey = '@FirebaseLocalCache:' + eventType + ':' + location;
+			promises.push(_reactNative.AsyncStorage.removeItem(storageKey));
+		});
 
-							acceptedOnVerbs.forEach(function () {
-								var _ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(eventType) {
-									var storageKey;
-									return regeneratorRuntime.wrap(function _callee2$(_context2) {
-										while (1) {
-											switch (_context2.prev = _context2.next) {
-												case 0:
-													storageKey = '@FirebaseLocalCache:' + eventType + ':' + location;
-													_context2.next = 3;
-													return _reactNative.AsyncStorage.removeItem(storageKey);
-
-												case 3:
-												case 'end':
-													return _context2.stop();
-											}
-										}
-									}, _callee2, _this2);
-								}));
-
-								return function (_x) {
-									return _ref.apply(this, arguments);
-								};
-							}());
-
-						case 2:
-						case 'end':
-							return _context3.stop();
-					}
-				}
-			}, _callee3, _this2);
-		}))();
+		return Promise.all(promises);
 	},
 
 
 	/**
   * Remove all currently cached data. If there are any listeners still active, they will re-write their data to the cache when the .off method is called.
+  * @returns {Promise} Promise that resolves when all cached data has been deleted.
   */
 	clearCache: function clearCache() {
-		var _this3 = this;
+		return _reactNative.AsyncStorage.getAllKeys().then(function (keys) {
+			var promises = [];
 
-		return _asyncToGenerator(regeneratorRuntime.mark(function _callee5() {
-			var keys;
-			return regeneratorRuntime.wrap(function _callee5$(_context5) {
-				while (1) {
-					switch (_context5.prev = _context5.next) {
-						case 0:
-							_context5.next = 2;
-							return _reactNative.AsyncStorage.getAllKeys();
-
-						case 2:
-							keys = _context5.sent;
-
-							keys.forEach(function () {
-								var _ref2 = _asyncToGenerator(regeneratorRuntime.mark(function _callee4(key) {
-									return regeneratorRuntime.wrap(function _callee4$(_context4) {
-										while (1) {
-											switch (_context4.prev = _context4.next) {
-												case 0:
-													if (!key.startsWith('@FirebaseLocalCache:')) {
-														_context4.next = 3;
-														break;
-													}
-
-													_context4.next = 3;
-													return _reactNative.AsyncStorage.removeItem(key);
-
-												case 3:
-												case 'end':
-													return _context4.stop();
-											}
-										}
-									}, _callee4, _this3);
-								}));
-
-								return function (_x2) {
-									return _ref2.apply(this, arguments);
-								};
-							}());
-
-						case 4:
-						case 'end':
-							return _context5.stop();
-					}
+			keys.forEach(function (key) {
+				if (key.startsWith('@FirebaseLocalCache:')) {
+					//delete it from the cache if it exists.
+					promises.push(_reactNative.AsyncStorage.removeItem(key));
 				}
-			}, _callee5, _this3);
-		}))();
+			});
+
+			return Promise.all(promises);
+		});
 	}
 };
 

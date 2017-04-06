@@ -19,6 +19,10 @@ this.userRef.on('value', function(snap) {
 The equivalent using this module would be:
 
 ```javascript
+import * as cachedListener from 'react-native-firebase-local-cache';
+
+...
+
 cachedListener.on(this.userRef, 'value', function(snap) {
   return {
     name: snap.val().name,
@@ -51,6 +55,11 @@ this.userRoomsRef.on('value', function(snap) {
 Again, until any data has been loaded, the list will remain empty. The equivalent code to cache this list for subsequent loads would be:
 
 ```javascript
+import * as cachedListener from 'react-native-firebase-local-cache';
+
+...
+
+
 cachedListener.on(this.userRoomsRef, 'value', function(snap) {
   var rooms = [];
 
@@ -69,7 +78,7 @@ cachedListener.on(this.userRoomsRef, 'value', function(snap) {
 },this);
 ```
 
-The first callback does any processing of new data required and returns a __`JSON.stringify-able`__ object that can be cached. (_Note: objects are only commited to the cache when the corresponding `cachedListener.off(...)` method is called._)
+The first callback does any processing of new data required and returns a __`JSON.stringify-able`__ object that can be cached. (_Note: objects are only committed to the cache when the corresponding `cachedListener.off(...)` method is called._)
 
 The second callback is passed either the freshly processed new data, or when first started, the cached data.
 
@@ -111,7 +120,7 @@ cachedListener.on(this.userRef, 'value', function(snap) {
 
 When the first case runs, it will remove the `age` from the cache as it is not present in the returned data. 
 
-One solution is to use a helper method that saves everything:
+One solution is to use a helper method that will use a single method to process the snapshot, and save everything you require:
 
 ```javascript
 const usersRef = firebase.database().ref('users');
@@ -139,6 +148,8 @@ Helper.createCachedUserListener(this.userId, function(user) {
 }, this);
 ```
 
+You'll still need to call the off method to commit the data to the cache, whether you do this in a helper method or by calling it directly is up to you.
+
 ## Differences and Limitations
 
 There are some subtle differences between this implementation and the Firebase one that should be noted:
@@ -148,17 +159,13 @@ There are some subtle differences between this implementation and the Firebase o
 * If passing a context, either do so as the 5th parameter (if no cancelCallback is defined), or as the 6th parameter (if a cancelCallback is defined). I.e. don't pass a null or undefined cancelCallback, either omit it completely or put in something valid.
 * You should have been calling the `dbRef.off()` method previously, continue to do so but call `cachedListener.off(dbRef)`. This is when the data is actually saved to the cache.
 
-## Methods
+## API
 
-__I think i am going to get rid of those `async`'s. Let me know if you are violently opposed.__
+See the auto-generated and hopefully up-to-date docs at: [./docs/index.md](https://github.com/cuttingsoup/react-native-firebase-local-cache/blob/master/docs/index.md)
 
-`on(dbRef, eventType, snapCallback, processedCallback, cancelCallbackOrContext, context)`
+The code above should give a pretty good idea of how to use it.
 
-`async off(dbRef)`
-
-`async clearCacheForRef(dbRef)`
-
-`async clearCache()`
+Or look at the future Example app which doesn't yet exist.
 
 ## Other Info
 
