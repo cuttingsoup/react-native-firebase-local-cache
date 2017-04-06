@@ -66,47 +66,63 @@ const cachedDb = {
 	/**
 	 * Remove any listeners from the specified ref, and save any existing data to the cache.
 	 * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
+	 * @returns {Promise} Promis that will resolve after listener is switched off and cache has been written.
 	 */
-	async off(dbRef) {
+	off(dbRef) {
 		const location = dbRef.toString().substring(dbRef.root.toString().length);
 
 		// If a new acceptedOnVerb is added, do a foreach. Or do one when i am not feeling lazy.
 		var storageKey = `@FirebaseLocalCache:value:${location}`;
 
-		//Save to the cache, if there is data for it. Don't return until saved.
-		if(storageKey in snapPeak) {
-			await AsyncStorage.setItem(storageKey, snapPeak[storageKey]);
-			//Clear the locally cached version.
-			delete snapPeak[storageKey];
-		}
-
 		//And turn listener off.
 		dbRef.off();
+
+		return new Promise((resolve, reject) => {
+			if(storageKey in snapPeak) {
+				const dataToCache = snapPeak[storageKey];
+				delete snapPeak[storageKey];
+				resolve(AsyncStorage.setItem(storageKey, dataToCache));
+			} else {
+				resolve(null);
+			}
+		});
 	},
 
 	/**
 	 * Remove the currently cached data for a particular database.Reference. If there are any listeners still active, they will re-write their data to the cache when the .off method is called.
 	 * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
+	 * @returns {Promise} Promise that resolves once all cached data for this ref has been cleared.
 	 */
-	async clearCacheForRef(dbRef) {
+	clearCacheForRef(dbRef) {
 		const location = dbRef.toString().substring(dbRef.root.toString().length);
 
-		acceptedOnVerbs.forEach(async (eventType) => {
+		var promises = [];
+
+		acceptedOnVerbs.forEach((eventType) => {
 			const storageKey = `@FirebaseLocalCache:${eventType}:${location}`;
-			await AsyncStorage.removeItem(storageKey);
-		});
+			promises.push(AsyncStorage.removeItem(storageKey))
+		})
+		
+		return Promise.all(promises);
 	},
 
 	/**
 	 * Remove all currently cached data. If there are any listeners still active, they will re-write their data to the cache when the .off method is called.
+	 * @returns {Promise} Promise that resolves when all cached data has been deleted.
 	 */
-	async clearCache() {
-		const keys = await AsyncStorage.getAllKeys();
-		keys.forEach(async (key) => {
-			if (key.startsWith('@FirebaseLocalCache:')) {
-				//delete it from the cache if it exists.
-				await AsyncStorage.removeItem(key);
-			}
+	clearCache() {
+		return AsyncStorage.getAllKeys()
+		.then((keys) => {
+			var promises = [];
+
+			keys.forEach((key) => {
+				if (key.startsWith('@FirebaseLocalCache:')) {
+					//delete it from the cache if it exists.
+					promises.push(AsyncStorage.removeItem(key));
+				}
+			});
+
+			return Promise.all(promises);
 		});
 	},
 

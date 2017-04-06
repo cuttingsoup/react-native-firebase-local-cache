@@ -53,18 +53,22 @@ jest.mock('react-native', () => {
 const mockUrl = "https://fake.firbase.com/";
 const mockDbRefUrl = mockUrl + "my/db/ref";
 
-var mockDbRef = {
-	root: mockUrl,
-	toString: function() { return mockDbRefUrl; },
+const makeMockDbRef = () => {
+	return {
+		root: mockUrl,
+		toString: function() { return mockDbRefUrl; },
 
-	on: function(eventType, callback, cancelCallbackOrContext, context) {
-		if(context) {
-			callback.bind(context)("fake-data");
-		} else if (cancelCallbackOrContext && typeof(cancelCallbackOrContext) !== 'function') {
-			callback.bind(cancelCallbackOrContext)("fake-data");
-		} else {
-			callback("fake-data");
-		}
+		on: function(eventType, callback, cancelCallbackOrContext, context) {
+			if(context) {
+				callback.bind(context)("fake-data");
+			} else if (cancelCallbackOrContext && typeof(cancelCallbackOrContext) !== 'function') {
+				callback.bind(cancelCallbackOrContext)("fake-data");
+			} else {
+				callback("fake-data");
+			}
+		},
+
+		off: jest.fn(),
 	}
 }
 
@@ -88,6 +92,8 @@ describe('on', () => {
 		const { AsyncStorage } = require('react-native');
 		const cachedDb = require(INDEX_PATH);
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
 
@@ -102,6 +108,8 @@ describe('on', () => {
 	it('should call snapCallback followed by processedCallback as normal if unsupported eventType used', () => {
 		const { AsyncStorage } = require('react-native');
 		const cachedDb = require(INDEX_PATH);
+
+		var mockDbRef = makeMockDbRef();
 
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
@@ -121,6 +129,8 @@ describe('on', () => {
 		const cachedDb = require(INDEX_PATH);
 
 		const context = {str: 'test'};
+
+		var mockDbRef = makeMockDbRef();
 
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce('processed');
@@ -168,6 +178,8 @@ describe('on', () => {
 
 		const context = {str: 'test'};
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce('processed');
 
@@ -198,6 +210,8 @@ describe('on', () => {
 		const cachedDb = require(INDEX_PATH);
 
 		const context = {str: 'test'};
+
+		var mockDbRef = makeMockDbRef();
 
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce('processed');
@@ -231,6 +245,8 @@ describe('on', () => {
 
 		const context = {str: 'test'};
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		const processedCallback = jest.fn();
 
@@ -253,6 +269,8 @@ describe('on', () => {
 		const { AsyncStorage } = require('react-native');
 		const cachedDb = require(INDEX_PATH);
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
 		snapCallback.mockReturnValueOnce("processed2");
@@ -260,7 +278,7 @@ describe('on', () => {
 		const processedCallback = jest.fn();
 
 		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
-		.then(() => { cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.off(mockDbRef) })
 		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -270,6 +288,8 @@ describe('on', () => {
 			expect(processedCallback.mock.calls[0][0]).toBe("processed"); //Original call
 			expect(processedCallback.mock.calls[1][0]).toBe("processed"); //Cached data
 			expect(processedCallback.mock.calls[2][0]).toBe("processed2"); // second call.
+
+			expect(mockDbRef.off.mock.calls.length).toBe(1);
 		});
 
 	});
@@ -280,6 +300,8 @@ describe('on', () => {
 
 		const context = {str: 'test'};
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
 		snapCallback.mockReturnValueOnce("processed2");
@@ -292,7 +314,7 @@ describe('on', () => {
 		}
 
 		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
-		.then(() => { cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.off(mockDbRef) })
 		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallbackWrapper, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -302,6 +324,8 @@ describe('on', () => {
 			expect(processedCallback.mock.calls[0][0]).toBe("processed"); //Original call
 			expect(processedCallback.mock.calls[1][0]).toBe("processed"); //Cached data
 			expect(processedCallback.mock.calls[2][0]).toBe("processed2"); // second call.
+
+			expect(mockDbRef.off.mock.calls.length).toBe(1);
 		});
 	});
 
@@ -310,6 +334,8 @@ describe('on', () => {
 		const cachedDb = require(INDEX_PATH);
 
 		const context = {str: 'test'};
+
+		var mockDbRef = makeMockDbRef();
 
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
@@ -323,7 +349,7 @@ describe('on', () => {
 		}
 
 		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
-		.then(() => { cachedDb.off(mockDbRef) })
+		.then(() => { return cachedDb.off(mockDbRef) })
 		.then(() => { return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallbackWrapper, ()=>{}, context); })
 		.then(() => {
 			expect(snapCallback.mock.calls.length).toBe(2);
@@ -333,6 +359,8 @@ describe('on', () => {
 			expect(processedCallback.mock.calls[0][0]).toBe("processed"); //Original call
 			expect(processedCallback.mock.calls[1][0]).toBe("processed"); //Cached data
 			expect(processedCallback.mock.calls[2][0]).toBe("processed2"); // second call.
+
+			expect(mockDbRef.off.mock.calls.length).toBe(1);
 		});
 	});
 
@@ -344,13 +372,15 @@ describe('clearCacheForRef', () => {
 		const { AsyncStorage } = require('react-native');
 		const cachedDb = require(INDEX_PATH);
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
 
 		const processedCallback = jest.fn();
 
 		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
-		.then(() => { cachedDb.off(mockDbRef) }) //put something in the cache.
+		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
 
@@ -362,7 +392,7 @@ describe('clearCacheForRef', () => {
 
 			expect(count).toBe(1);
 		}).then(() => {
-			cachedDb.clearCacheForRef(mockDbRef);
+			return cachedDb.clearCacheForRef(mockDbRef);
 		}).then(() => {
 			for(var propName in AsyncStorage.getStore()) {
  				if(AsyncStorage.getStore().hasOwnProperty(propName)) {
@@ -381,13 +411,15 @@ describe('clearCache', () => {
 		const { AsyncStorage } = require('react-native');
 		const cachedDb = require(INDEX_PATH);
 
+		var mockDbRef = makeMockDbRef();
+
 		const snapCallback = jest.fn();
 		snapCallback.mockReturnValueOnce("processed");
 
 		const processedCallback = jest.fn();
 
 		return cachedDb.on(mockDbRef, 'value', snapCallback, processedCallback)
-		.then(() => { cachedDb.off(mockDbRef) }) //put something in the cache.
+		.then(() => { return cachedDb.off(mockDbRef) }) //put something in the cache.
 		.then(() => { 
 			var count = 0;
 
@@ -399,7 +431,7 @@ describe('clearCache', () => {
 
 			expect(count).toBe(1);
 		}).then(() => {
-			cachedDb.clearCache();
+			return cachedDb.clearCache();
 		}).then(() => {
 			for(var propName in AsyncStorage.getStore()) {
  				if(AsyncStorage.getStore().hasOwnProperty(propName)) {
