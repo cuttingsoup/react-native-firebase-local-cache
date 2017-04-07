@@ -8,50 +8,53 @@ var _reactNative = require('react-native');
 
 var snapPeak = {};
 
-var acceptedOnVerbs = ['value'];
+var acceptedOnVerbs = ['value', 'child_added'];
 
 function emptyFunction() {};
+
+function getStorageKeyFromDbRef(dbRef, eventType) {
+	var location = dbRef.toString().substring(dbRef.root.toString().length);
+	return '@FirebaseLocalCache:' + eventType + ':' + location;
+}
+
+/**
+ * Call a function with a single argument (arg), and bind the correct context. If no cancelCallback is defined, use cancelCallbackOrContext as context, otherwise use context.
+ * @param {*} functionToCall The function that should be called - must take one argument.
+ * @param {*} arg The argument to pass to functionToCall
+ * @param {*} cancelCallbackOrContext A callback, or context if no callback is provided.
+ * @param {*} context A context to bind to the funcitonToCall.
+ */
+function callWithContext(functionToCall, arg, cancelCallbackOrContext, context) {
+	if (cancelCallbackOrContext) {
+		if (context) {
+			functionToCall.bind(context)(arg);
+		} else {
+			functionToCall.bind(cancelCallbackOrContext)(arg);
+		}
+	} else {
+		functionToCall(arg);
+	}
+}
 
 var cachedDb = {
 
 	/**
-  * Create an "on" listener that will first return a cached version of the endpoint.
-  * @param {firebase.database.Reference} dbRef Firebase database reference to listen at.
-  * @param {String} eventType One of the following strings: "value", "child_added", "child_changed", "child_removed", or "child_moved."
-  * @param {Function} snapCallback Callback called when a new snapshot is available. Should return a JSON.stringify-able object that will be cached.
-  * @param {Function} processedCallback Callback called with data returned by snapCallback, or cached data if available.
+  * Create an 'value' on listener that will first return a cached version of the endpoint.
+  * @param {firebase.database.Reference} dbRef Firebase database reference to listen at. 
+  * @param {Function} snapCallback Callback called when a new snapshot is available. Should return a JSON.stringify-able object that will be cached. 
+  * @param {Function} processedCallback Callback called with data returned by snapCallback, or cached data if available. 
   * @param {Function|Object} cancelCallbackOrContext An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
   * @param {Object} context If provided, this object will be used as this when calling your callback(s).
   * @returns {Promise} Resolves when the cache has been read and listener attached to DB ref. 
   */
-	on: function on(dbRef, eventType, snapCallback, processedCallback, cancelCallbackOrContext, context) {
-		if (!acceptedOnVerbs.includes(eventType)) {
-			//Don't cache anything else yet.
-			var callback = function callback(snap) {
-				var processed = snapCallback.bind(this)(snap);
-				processedCallback.bind(this)(processed);
-			};
-			return new Promise(function (resolve, reject) {
-				dbRef.on(eventType, callback, cancelCallbackOrContext, context);
-				resolve(null);
-			});
-		}
-
-		var location = dbRef.toString().substring(dbRef.root.toString().length);
-		var storageKey = '@FirebaseLocalCache:' + eventType + ':' + location;
+	onValue: function onValue(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'value');
 
 		return _reactNative.AsyncStorage.getItem(storageKey).then(function (value) {
+			// Called processedCallback with cached value.
 			if (value !== null) {
 				var cachedVal = JSON.parse(value);
-				if (cancelCallbackOrContext) {
-					if (context) {
-						processedCallback.bind(context)(cachedVal);
-					} else {
-						processedCallback.bind(cancelCallbackOrContext)(cachedVal);
-					}
-				} else {
-					processedCallback(cachedVal);
-				}
+				callWithContext(processedCallback, cachedVal, cancelCallbackOrContext, context);
 			}
 		}).then(function () {
 			var callbackPeak = function callbackPeak(snap) {
@@ -59,7 +62,7 @@ var cachedDb = {
 				snapPeak[storageKey] = JSON.stringify(processed);
 				processedCallback.bind(this)(processed);
 			};
-			dbRef.on(eventType, callbackPeak, cancelCallbackOrContext, context);
+			dbRef.on('value', callbackPeak, cancelCallbackOrContext, context);
 		});
 	},
 
@@ -69,13 +72,10 @@ var cachedDb = {
   * @param {firebase.database.Reference} dbRef Firebase database reference to clear.
   * @returns {Promise} Promis that will resolve after listener is switched off and cache has been written.
   */
-	off: function off(dbRef) {
-		var location = dbRef.toString().substring(dbRef.root.toString().length);
+	offValue: function offValue(dbRef) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'value');
 
-		// If a new acceptedOnVerb is added, do a foreach. Or do one when i am not feeling lazy.
-		var storageKey = '@FirebaseLocalCache:value:' + location;
-
-		//And turn listener off.
+		//Turn listener off.
 		dbRef.off();
 
 		return new Promise(function (resolve, reject) {
@@ -87,6 +87,96 @@ var cachedDb = {
 				resolve(null);
 			}
 		});
+	},
+
+
+	/**
+  * Create an 'child_added' on listener that will first return any cached data saved by a call to offChildAdded. When fresh data arrives, newDataArrivingCallback will be called once, followed by the standard snap callback. From this point on only the snapCallback will be called.
+  * @param {firebase.database.Reference} dbRef Firebase database reference to listen at. 
+  * @param {*} fromCacheCallback Callback that will be called with cached data if any is available.
+  * @param {*} newDataArrivingCallback Callback called immediately before fresh data starts arriving.
+  * @param {*} snapCallback Callback called when new data snapshots arrive from the server.
+  * @param {*} cancelCallbackOrContext Optional callback that will be called in the case of an error, e.g. forbidden.
+  * @param {*} context Optional context that will be bound to `this` in callbacks.
+  * @returns {Promise} Resolves when the cache has been read and listener attached to DB ref.
+  */
+	onChildAdded: function onChildAdded(dbRef, fromCacheCallback, newDataArrivingCallback, snapCallback, cancelCallbackOrContext, context) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'child_added');
+
+		return _reactNative.AsyncStorage.getItem(storageKey).then(function (value) {
+			// Called processedCallback with cached value.
+			if (value !== null) {
+				var cachedVal = JSON.parse(value);
+				callWithContext(fromCacheCallback, cachedVal, cancelCallbackOrContext, context);
+			}
+		}).then(function () {
+			var firstData = true;
+
+			var callbackIntercept = function callbackIntercept(snap) {
+				//Call the data arriving callback the first time new data comes in.
+				if (firstData) {
+					firstData = false;
+					newDataArrivingCallback.bind(this)();
+				}
+				//Then call the snapCallback as normal.
+				snapCallback.bind(this)(snap);
+			};
+
+			dbRef.on('child_added', callbackIntercept, cancelCallbackOrContext, context);
+		});
+	},
+
+
+	/**
+  * Turn off listeners at a certain database.Reference, and cache the data passed in so that it can be passed to a new "child_added" listener if one is created. 
+  * @param {*} dbRef Reference to stop listening at.
+  * @param {*} dataToCache Data that should be cached for this location. Tip: [].slice(-20) to keep the latest 20 items.
+  */
+	offChildAdded: function offChildAdded(dbRef, dataToCache) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'child_added');
+
+		//Turn listener off.
+		dbRef.off();
+
+		return new Promise(function (resolve, reject) {
+			resolve(_reactNative.AsyncStorage.setItem(storageKey, JSON.stringify(dataToCache)));
+		});
+	},
+
+
+	/**
+  * Wrapper around Firebase on child_removed listener.
+  * @param {*} dbRef Database reference to listen at.
+  * @param {*} callback A callback that fires when the specified event occurs. The callback will be passed a DataSnapshot. For ordering purposes, "child_added", "child_changed", and "child_moved" will also be passed a string containing the key of the previous child, by sort order, or null if it is the first child.
+  * @param {*} cancelCallbackOrContext An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
+  * @param {*} context If provided, this object will be used as this when calling your callback(s).
+  */
+	onChildRemoved: function onChildRemoved(dbRef, callback, cancelCallbackOrContext, context) {
+		return dbRef.on('child_removed', callback, cancelCallbackOrContext, context);
+	},
+
+
+	/**
+  * Wrapper around Firebase on child_changed listener.
+  * @param {*} dbRef Database reference to listen at.
+  * @param {*} callback A callback that fires when the specified event occurs. The callback will be passed a DataSnapshot. For ordering purposes, "child_added", "child_changed", and "child_moved" will also be passed a string containing the key of the previous child, by sort order, or null if it is the first child.
+  * @param {*} cancelCallbackOrContext An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
+  * @param {*} context If provided, this object will be used as this when calling your callback(s).
+  */
+	onChildChanged: function onChildChanged(dbRef, callback, cancelCallbackOrContext, context) {
+		return dbRef.on('child_changed', callback, cancelCallbackOrContext, context);
+	},
+
+
+	/**
+  * Wrapper around Firebase on child_moved listener.
+  * @param {*} dbRef Database reference to listen at.
+  * @param {*} callback A callback that fires when the specified event occurs. The callback will be passed a DataSnapshot. For ordering purposes, "child_added", "child_changed", and "child_moved" will also be passed a string containing the key of the previous child, by sort order, or null if it is the first child.
+  * @param {*} cancelCallbackOrContext An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
+  * @param {*} context If provided, this object will be used as this when calling your callback(s).
+  */
+	onChildMoved: function onChildMoved(dbRef, callback, cancelCallbackOrContext, context) {
+		return dbRef.on('child_moved', callback, cancelCallbackOrContext, context);
 	},
 
 

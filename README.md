@@ -3,7 +3,13 @@
 # react-native-firebase-local-cache
 A simple wrapper to add local caching of data to Firebase `on(...)` listeners, useful for improving the apparent load time of screens/pages in your app. 
 
-## Sample Use Case
+## Breaking Change!
+
+Unfortunately in implementing the changes to add onChildAdded listeners i have completely changed the API. I like it now though so it should be fairly static from here on out. The planned future changes will be adding Once listeners which won't change the on listeners.
+
+## Simple Use Case - `onValue`
+
+`onValue(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context)`
 
 In the simplest example, say displaying a users name and email. Previously you could do the following:
 
@@ -16,14 +22,14 @@ this.userRef.on('value', function(snap) {
 },this);
 ```
 
-The equivalent using this module would be:
+The equivalent using this module would use `onValue(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context)`:
 
 ```javascript
 import * as cachedListener from 'react-native-firebase-local-cache';
 
 ...
 
-cachedListener.on(this.userRef, 'value', function(snap) {
+cachedListener.onValue(this.userRef, function(snap) {
   return {
     name: snap.val().name,
     email: snap.val().email
@@ -31,7 +37,9 @@ cachedListener.on(this.userRef, 'value', function(snap) {
 }, this.setState, this);
 ```
 
-There is a little bit of trickiness going on here, but essentially the return value of the first callback is cached, then passed as an argument to the second callback. The next time a listener is set up, `setState` will be called with the cached data immediately, then when a snapshot arrived from the server it will be processed normally.
+There is a little bit of trickiness going on here, but essentially the return value of `snapCallback` is cached, then passed as an argument to the `processedCallback`. The next time the listener is set up, `processedCallback` (in this case `this.setState`) will be called with the cached data immediately. When fresh snapshots arrive from the server they will be processed through both callbacks.
+
+So why not cache the `snapshot` directly? It is actually a pretty complex object that can't be stringified easily, it makes more sense to just process the snapshot and save that. Contributions always welcome though!
 
 Another slightly more complex example, say you have a list showing chat rooms a user is subscribed to, you might use the following code:
 
@@ -60,7 +68,7 @@ import * as cachedListener from 'react-native-firebase-local-cache';
 ...
 
 
-cachedListener.on(this.userRoomsRef, 'value', function(snap) {
+cachedListener.onValue(this.userRoomsRef, function(snap) {
   var rooms = [];
 
   snap.forEach((child) => {
@@ -84,7 +92,7 @@ The second callback is passed either the freshly processed new data, or when fir
 
 A cancelCallback and/or context can optionally be passed as well.
 
-## Multiple Listeners
+## Multiple Listeners - `onValue`
 
 If you have multiple listeners attached to the same location, it is possible that they will overwrite each other, here is a very contrived example:
 
@@ -93,7 +101,7 @@ On one screen:
 ```javascript
 this.userRef = firebase.database().ref(`users/${this.userId}`);
 
-cachedListener.on(this.userRef, 'value', function(snap) {
+cachedListener.onValue(this.userRef, function(snap) {
   return {
     name: snap.val().name,
     email: snap.val().email
@@ -106,7 +114,7 @@ And on another:
 ```javascript
 this.userRef = firebase.database().ref(`users/${this.userId}`);
 
-cachedListener.on(this.userRef, 'value', function(snap) {
+cachedListener.onValue(this.userRef, function(snap) {
   return {
     name: snap.val().name,
     email: snap.val().email,
@@ -128,7 +136,7 @@ const usersRef = firebase.database().ref('users');
 ...
 
 export function createCachedUserListener(userId, callback, errorCallback, context) {
-  cachedListener.on(usersRef.child(userId), 'value', function(snapshot) {
+  cachedListener.onValue(usersRef.child(userId), function(snapshot) {
     //Process the snapshot to get any data that might be required.
     return {
       name: snap.val().name,
@@ -144,20 +152,83 @@ On your original files, just use the data that is required:
 ```javascript
 Helper.createCachedUserListener(this.userId, function(user) {
   this.setState(user);
-  this._do_somethingWithEmail(user.email);
+  this._doSomethingWithEmail(user.email);
 }, this);
 ```
 
 You'll still need to call the off method to commit the data to the cache, whether you do this in a helper method or by calling it directly is up to you.
 
+## Simple Use Case - `onChildAdded`
+
+The flow of data through the `onChildAdded` method is somewhat different , but this is reflective of the common use cases.
+
+### `onChildAdded(dbRef, fromCacheCallback, newDataArrivingCallback, snapCallback, cancelCallbackOrContext, context)` 
+
+Create an 'child_added' on listener that will first return any cached data saved by a call to offChildAdded. When fresh data arrives, newDataArrivingCallback will be called once, followed by the standard snap callback. From this point on only the snapCallback will be called.
+
+**Parameters**
+
+**dbRef**: `firebase.database.Reference`, Firebase database reference to listen at.
+
+**fromCacheCallback**: `*`, Callback that will be called with cached data if any is available.
+
+**newDataArrivingCallback**: `*`, Callback called immediately before fresh data starts arriving.
+
+**snapCallback**: `*`, Callback called when new data snapshots arrive from the server.
+
+**cancelCallbackOrContext**: `*`, Optional callback that will be called in the case of an error, e.g. forbidden.
+
+**context**: `*`, Optional context that will be bound to `this` in callbacks.
+
+**Returns**: `Promise`, Resolves when the cache has been read and listener attached to DB ref.
+
+### Example App Demo
+
+The following is from the example app:
+
+```javascript
+  _startCachedListener() {
+    cachedListener.onChildAdded(this.messagesRef, function(cached){
+      // Receiving cached list of messages:
+      this.setState({
+        dataSource: this.state.dataSource.cloneWithRows(cached),
+      }); 
+    }, function() {
+      //Clean up messages list (not required but this is where you would do it if it was)
+      this.messages = [];
+    }, function(snapshot) {
+      //New snapshot available.
+      this.messages.push(this._messageFromSnapshot(snapshot));
+    
+      this.setState({
+        dataSource: this.state.dataSource.cloneWithRows(this.messages),
+      }); 
+    },this);
+  }
+
+  _stopCachedListener() {
+    //Cache the top two messages. Alternatively, use this.messages.slice(-2) for the last two - depends on how they are sorted.
+    cachedListener.offChildAdded(this.messagesRef, this.messages.slice(0,2)); 
+  }
+```
+
+The first callback , `fromCacheCallback`, is passed the cached data, and loads the ListView datasource with this data.
+
+When fresh data starts arriving the second callback, `newDataArrivingCallback`, is called. In this case nothing needs to be done, however there are cases where cached data needs to be cleared.
+
+After this is called, the third callback, `snapCallback`, is called with the new snapshot.
+
+In the `_stopCachedListener` call, the first 2 messages are slices off the message array and passed to the `offChildAdded` method, the next time the screen is opened `fromCacheCallback` will be called and passed this item.
+
+The other `child_...` eventypes are all wrapped in `onChild...` methods that do nothing other than pass data through to the native method.
+
 ## Differences and Limitations
 
 There are some subtle differences between this implementation and the Firebase one that should be noted:
 
-* The only valid `eventType` value is `'value'`. Note that the module should pass everything through to the native method, but no data will be cached.
 * The Firebase `database.Reference.on(...)` method returns the provided callback function unmodified. In this module a Promise is returned that is resolved after cached data has been loaded, the callback has been called, and the native listener has been started.
 * If passing a context, either do so as the 5th parameter (if no cancelCallback is defined), or as the 6th parameter (if a cancelCallback is defined). I.e. don't pass a null or undefined cancelCallback, either omit it completely or put in something valid.
-* You should have been calling the `dbRef.off()` method previously, continue to do so but call `cachedListener.off(dbRef)`. This is when the data is actually saved to the cache.
+* You should have been calling the `dbRef.off()` method previously, continue to do so but call `cachedListener.offValue(dbRef)` or `cachedListener.offChildAdded(...)`. This is when the data is actually saved to the cache.
 
 ## API
 
