@@ -12,20 +12,40 @@ You'll also need to add some values to the realtime database, you can do so by c
 {
   "items" : {
     "-KgCr7WHT7qJwHWdPucd" : {
-      "description" : "This is a short description of the thing. I will make it the same for each! Except for this number: 1",
+      "description" : "this is a short description of the thing. I will make it the same for each! 1",
       "name" : "item 1"
     },
     "-KgCrKOhfACgRUQ0Jqlx" : {
-      "description" : "This is a short description of the thing. I will make it the same for each! Except for this number: 2",
+      "description" : "this is a short description of the thing. I will make it the same for each! 2",
       "name" : "item 2"
     },
     "-KgEiREmxHOVSZM7WB17" : {
-      "description" : "This is a short description of the thing. I will make it the same for each! Except for this number: 3",
+      "description" : "this is a short description of the thing. I will make it the same for each! 3",
       "name" : "item 3"
     },
     "-KgGX2x6fHShZVOam48M" : {
-      "description" : "This is a short description of the thing. I will make it the same for each! Except for this number: 4",
+      "description" : "this is a short description of the thing. I will make it the same for each! 4",
       "name" : "item 4"
+    }
+  },
+  "messages" : {
+    "msg1" : {
+      "message" : "hello"
+    },
+    "msg2" : {
+      "message" : "hi"
+    },
+    "msg3" : {
+      "message" : "how are you?"
+    },
+    "msg4" : {
+      "message" : "you should know."
+    },
+    "msg5" : {
+      "message" : "how?"
+    },
+    "msg6" : {
+      "message" : "you are me."
     }
   },
   "user-items" : {
@@ -42,6 +62,7 @@ You'll also need to add some values to the realtime database, you can do so by c
     }
   }
 }
+
 ```
 
 This is, as usual, a contrived example where each user has a list of items stored in `user-items` that contains some limited information, while the majority of the info is stored in an object under `items`. For permissions, just set everything to read only:
