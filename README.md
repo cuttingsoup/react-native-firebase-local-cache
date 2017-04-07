@@ -1,11 +1,41 @@
 [![Build Status](https://travis-ci.org/cuttingsoup/react-native-firebase-local-cache.svg?branch=master)](https://travis-ci.org/cuttingsoup/react-native-firebase-local-cache) [![Coverage Status](https://coveralls.io/repos/github/cuttingsoup/react-native-firebase-local-cache/badge.svg?branch=master)](https://coveralls.io/github/cuttingsoup/react-native-firebase-local-cache?branch=master) 
 
 # react-native-firebase-local-cache
-A simple wrapper to add local caching of data to Firebase `on(...)` listeners, useful for improving the apparent load time of screens/pages in your app. 
+A simple wrapper to add local caching of data to Firebase `on(...)` and `once(...)` listeners, useful for improving the apparent load time of screens/pages in your app. 
 
-## Breaking Change!
+## Updated API
 
-Unfortunately in implementing the changes to add onChildAdded listeners i have completely changed the API. I like it now though so it should be fairly static from here on out. The planned future changes will be adding Once listeners which won't change the on listeners.
+The exported methods from the module have changed slightly recently with the addition of support for `child_...ed` events and an equivalent to `once(...)`. The exports are:
+
+### `'value'` Events
+
+`onValue(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context)`
+
+`offValue(dbRef)`
+
+### `'child_added'` Events
+
+`onChildAdded(dbRef, fromCacheCallback, newDataArrivingCallback, snapCallback, cancelCallbackOrContext, context)`
+
+`offChildAdded(dbRef, dataToCache)`
+
+### Other Child Events
+
+`onChildRemoved(dbRef, callback, cancelCallbackOrContext, context)`
+
+`onChildChanged(dbRef, callback, cancelCallbackOrContext, context)`
+
+`onChildMoved(dbRef, callback, cancelCallbackOrContext, context)`
+
+### Once/Twice `'value'` Events
+
+`twice(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context)`
+
+### Cache Control
+
+`clearCacheForRef(dbRef)`
+
+`clearCache()`
 
 ## Simple Use Case - `onValue`
 
@@ -157,6 +187,15 @@ Helper.createCachedUserListener(this.userId, function(user) {
 ```
 
 You'll still need to call the off method to commit the data to the cache, whether you do this in a helper method or by calling it directly is up to you.
+
+## Simple Use Case - `twice`
+
+This is a wrapper around the firebase `once` method and operates in a very similar way to the `onValue` method listed above. The key differences are:
+
+* Just like `once`, it will only wait for one new piece of data to come from the server, then it will stop listening and disconnect.
+* `snapCallback` will only be called once when the new data arrives, `processedCallback` will be called twice - once with cached data, once with new data.
+* Data is cached as soon as it is returned from the snapCallback, rather than when the `off` method is called. (Since you don't need to call it...)
+* It is cached separately to the `onValue` data.
 
 ## Simple Use Case - `onChildAdded`
 

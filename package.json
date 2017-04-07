@@ -1,12 +1,12 @@
 {
   "name": "react-native-firebase-local-cache",
   "version": "0.3.1",
-  "description": "A simple wrapper to Firebase listeners to add local caching of data.",
+  "description": "Speed up the apparent load time of screens in your app by caching content. Wraps the Firebase 'on' and 'once' methods to make caching easy!",
   "main": "dist/index.js",
   "scripts": {
     "dist": "babel src -d dist",
     "gen-docs": "./node_modules/.bin/jsdox dist/index.js --output docs",
-    "preversion": "npm run dist -s ; npm run gen-docs -s",
+    "preversion": "npm run dist -s ; npm run gen-docs -s ; git add docs/index.md dist/index.js",
     "test": "./node_modules/.bin/jest"
   },
   "jest": {
