@@ -1,6 +1,6 @@
 {
   "name": "react-native-firebase-local-cache",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A simple wrapper to Firebase listeners to add local caching of data.",
   "main": "dist/index.js",
   "scripts": {
