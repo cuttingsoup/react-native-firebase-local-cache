@@ -10,8 +10,8 @@
     "firebase": "^3.7.5",
     "react": "16.0.0-alpha.6",
     "react-native": "0.43.1",
-    "react-navigation": "git+https://github.com/react-community/react-navigation.git",
-    "react-native-firebase-local-cache": "^0.2.0"
+    "react-native-firebase-local-cache": "^0.4.0",
+    "react-navigation": "git+https://github.com/react-community/react-navigation.git#297470099df37075aace5abdffa73559c3a3392b"
   },
   "devDependencies": {
     "babel-jest": "19.0.0",
