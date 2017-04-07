@@ -70,6 +70,16 @@ const makeMockDbRef = () => {
 		},
 
 		off: jest.fn(),
+
+		once: jest.fn((eventType, callback, cancelCallbackOrContext, context) => {
+			if(context) {
+				callback.bind(context)("fake-data");
+			} else if (cancelCallbackOrContext && typeof(cancelCallbackOrContext) !== 'function') {
+				callback.bind(cancelCallbackOrContext)("fake-data");
+			} else {
+				callback("fake-data");
+			}
+		}),
 	}
 }
 
@@ -538,6 +548,69 @@ describe('offChildAdded', () => {
 			expect(result).toBe(JSON.stringify('amIStored'));
 		});
 	});
+});
+
+describe('twice', () => {
+
+	it('should call snapCallback followed by processedCallback, with no cached data', (done) => {
+		const { AsyncStorage } = require('react-native');
+		const cachedDb = require(INDEX_PATH);
+
+		var mockDbRef = makeMockDbRef();
+
+		const snapCallback = jest.fn();
+		snapCallback.mockReturnValueOnce("processed");
+
+		const processedCallback = function(data) {
+			expect(snapCallback).toBeCalled();
+			expect(data).toBe('processed');
+			done();
+		};
+
+		cachedDb.twice(mockDbRef, snapCallback, processedCallback);
+	});
+
+	it('should call processedCallback with cached data, then snapCallback followed by processedCallback', (done) => {
+		const { AsyncStorage } = require('react-native');
+		const cachedDb = require(INDEX_PATH);
+
+		const context = {str: 'test'};
+
+		var mockDbRef = makeMockDbRef();
+
+		var count = 0;
+
+		AsyncStorage.setItem(`@FirebaseLocalCache:twice:${mockDbRefPath}`, JSON.stringify('cached'));
+
+		const snapCallback = jest.fn(function() {
+			//Check context.
+			expect(this).toBeDefined();
+			expect(this.str).toBe('test');
+			return 'processed';
+		});
+
+		const processedCallback = function(data) {
+			//Check context.
+			expect(this).toBeDefined();
+			expect(this.str).toBe('test');
+
+			if(count == 0) {
+				expect(data).toBe('cached');
+				count++;
+			} else {
+				expect(snapCallback.mock.calls.length).toBe(1);
+				expect(data).toBe('processed');
+
+				AsyncStorage.getItem(`@FirebaseLocalCache:twice:${mockDbRefPath}`).then((item) => {
+					expect(JSON.parse(item)).toBe('processed');
+					done();
+				})
+			}
+		};
+
+		cachedDb.twice(mockDbRef, snapCallback, processedCallback, context);
+	});
+
 });
 
 describe('clearCacheForRef', () => {
