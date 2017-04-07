@@ -14,6 +14,7 @@ import {
 import { NavigationActions } from 'react-navigation';
 
 import ItemList from './components/ItemList'
+import ChildAddedList from './components/ChildAddedList'
 
 export default class HomeScreen extends Component {
   static navigationOptions = {
@@ -41,6 +42,14 @@ export default class HomeScreen extends Component {
           onItemPress={this._navigateToItem} />
         <Text>Not Cached</Text>
         <ItemList
+          cached={false}
+          onItemPress={this._navigateToItem} />
+        <Text>Cached 'child_added'</Text>
+        <ChildAddedList
+          cached={true}
+          onItemPress={this._navigateToItem} />
+        <Text>Not Cached 'child_added'</Text>
+        <ChildAddedList
           cached={false}
           onItemPress={this._navigateToItem} />
       </View>
