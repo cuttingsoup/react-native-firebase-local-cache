@@ -12,7 +12,14 @@ const acceptedOnVerbs = ['value', 'child_added'];
 function emptyFunction(){};
 
 function getStorageKeyFromDbRef(dbRef, eventType) {
-	const location = dbRef.toString().substring(dbRef.root.toString().length);
+	var location = "";
+
+	if(dbRef.root) {
+		location = dbRef.toString().substring(dbRef.root.toString().length);
+	} else { //This is a query, not a ref.
+		location = dbRef.toString().substring(dbRef.ref.root.toString().length);
+	}
+
 	return `@FirebaseLocalCache:${eventType}:${location}`;
 }
 
