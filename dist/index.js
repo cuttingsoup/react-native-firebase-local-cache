@@ -8,7 +8,7 @@ var _reactNative = require('react-native');
 
 var snapPeak = {};
 
-var acceptedOnVerbs = ['value', 'child_added'];
+var acceptedOnVerbs = ['value', 'child_added', 'twice'];
 
 function emptyFunction() {};
 
@@ -185,6 +185,37 @@ var cachedDb = {
   */
 	onChildMoved: function onChildMoved(dbRef, callback, cancelCallbackOrContext, context) {
 		return dbRef.on('child_moved', callback, cancelCallbackOrContext, context);
+	},
+
+
+	/**
+  * Twice, one better than once! Operates in a similar way to `onValue`, however `snapCallback` will only ever be called once when fresh data arrives. The value returned by `snapCallback` will be cached immediately, then passed to the `processedCallback`. If cached data is available when the listener is first turned on, it will be loaded and passed to `processedCallback`. Once data is cached then, each call to `twice` will call `processedCallback` twice, once with cached data, then once with fresh data after being processed by `snapCallback`.
+  * @param {*} dbRef Database reference to listen at.
+  * @param {Function} snapCallback Callback called when a new snapshot is available. Should return a JSON.stringify-able object that will be cached. 
+  * @param {Function} processedCallback Callback called maximum of twice - once with cached data, once with freshly processed data.
+  * @param {Function|Object} cancelCallbackOrContext An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
+  * @param {Object} context If provided, this object will be used as this when calling your callback(s).
+  * @returns {Promise} Resolves when the cache has been read and listener attached to DB ref.
+  */
+	twice: function twice(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context) {
+		var storageKey = getStorageKeyFromDbRef(dbRef, 'twice');
+
+		return _reactNative.AsyncStorage.getItem(storageKey).then(function (value) {
+			// Called processedCallback with cached value.
+			if (value !== null) {
+				var cachedVal = JSON.parse(value);
+				callWithContext(processedCallback, cachedVal, cancelCallbackOrContext, context);
+			}
+		}).then(function () {
+			var callbackPeak = function callbackPeak(snap) {
+				var processed = snapCallback.bind(this)(snap);
+				//Store to cache.
+				_reactNative.AsyncStorage.setItem(storageKey, JSON.stringify(processed)).then(function () {
+					processedCallback.bind(this)(processed);
+				}.bind(this));
+			};
+			dbRef.once('value', callbackPeak, cancelCallbackOrContext, context);
+		});
 	},
 
 

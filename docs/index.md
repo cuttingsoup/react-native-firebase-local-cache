@@ -133,6 +133,25 @@ Wrapper around Firebase on child_moved listener.
 
 
 
+### twice(dbRef, snapCallback, processedCallback, cancelCallbackOrContext, context) 
+
+Twice, one better than once! Operates in a similar way to `onValue`, however `snapCallback` will only ever be called once when fresh data arrives. The value returned by `snapCallback` will be cached immediately, then passed to the `processedCallback`. If cached data is available when the listener is first turned on, it will be loaded and passed to `processedCallback`. Once data is cached then, each call to `twice` will call `processedCallback` twice, once with cached data, then once with fresh data after being processed by `snapCallback`.
+
+**Parameters**
+
+**dbRef**: `*`, Database reference to listen at.
+
+**snapCallback**: `function`, Callback called when a new snapshot is available. Should return a JSON.stringify-able object that will be cached.
+
+**processedCallback**: `function`, Callback called maximum of twice - once with cached data, once with freshly processed data.
+
+**cancelCallbackOrContext**: `function | Object`, An optional callback that will be notified if your event subscription is ever canceled because your client does not have permission to read this data (or it had permission but has now lost it). This callback will be passed an Error object indicating why the failure occurred.
+
+**context**: `Object`, If provided, this object will be used as this when calling your callback(s).
+
+**Returns**: `Promise`, Resolves when the cache has been read and listener attached to DB ref.
+
+
 ### clearCacheForRef(dbRef) 
 
 Remove the currently cached data for a particular database.Reference. If there are any listeners still active, they will re-write their data to the cache when the .off method is called.
